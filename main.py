@@ -1,110 +1,97 @@
-import os
-
 import numpy as np
-
 from utils import corrigir_duplicatas, gerar_filhos_com_crossover, mutacao
 
-data = np.loadtxt('cidades.mat')
-# para calcular a aptidao, adicione os valores da primeira coluna na ultima posição, pois o caixeiro precisa começar e terminar na mesma cidade
-# calcula a distancia, sorta de acordo com a distancia e retorna a aptidao
-# agora pega os 10 melhores cromosomes e faz os pais para gerar os filhes
-# Exibir a matriz carregada
-print(data)
+def rodar_genetico_multiplas_execucoes(data, num_cidades=20, cromossomos=20, geracoes=10000, execucoes=1):
+    # Calcula matriz de distâncias uma única vez
+    dCidades = np.zeros((num_cidades, num_cidades))
+    for i in range(num_cidades):
+        for j in range(num_cidades):
+            dCidades[i][j] = np.sqrt((data[0, i] - data[0, j]) ** 2 + (data[1, i] - data[1, j]) ** 2)
 
-numCidades = 20
-cromosomos = 20
+    resultados_finais = []
 
-matrizCromosomos = np.array([np.random.permutation(np.arange(1, cromosomos + 1)) for _ in range(cromosomos)])
+    for execucao in range(execucoes):
+        print(f"\n=== Execução {execucao + 1} ===")
 
-# Mostrar a matriz
-print("Matriz 20x20 com números de 1 a 20 sem repetição em cada linha:")
-print(matrizCromosomos)
+        # Inicializa população aleatoriamente a cada execução
+        populacao = np.array([np.random.permutation(np.arange(1, num_cidades + 1)) for _ in range(cromossomos)])
 
-dCidades = np.zeros((numCidades, numCidades))
+        for geracao in range(geracoes):
+            # Calcula custo para toda população
+            matrizComCusto = np.zeros((cromossomos, num_cidades + 1), dtype=float)
+            for i in range(cromossomos):
+                caminho = populacao[i] - 1
+                caminho_completo = np.append(caminho, caminho[0])
+                custo_total = 0.0
+                for j in range(num_cidades):
+                    origem = caminho_completo[j]
+                    destino = caminho_completo[j + 1]
+                    custo_total += dCidades[origem, destino]
+                matrizComCusto[i, :-1] = populacao[i]
+                matrizComCusto[i, -1] = custo_total
 
-# Calcular a distância entre cada par de cidades
-for i in range(numCidades):
-    for j in range(numCidades):
-        dCidades[i][j] = np.sqrt((data[0, i] - data[0, j]) ** 2 + (data[1, i] - data[1, j]) ** 2)
+            # Ordena população pelo custo (aptidão)
+            matrizOrdenada = matrizComCusto[matrizComCusto[:, -1].argsort()]
 
-print(dCidades)
+            if (geracao + 1) % 1000 == 0 or geracao == 0 or geracao == geracoes - 1:
+                print(f"Geração {geracao + 1}: Melhor custo: {matrizOrdenada[0, -1]}")
 
-matrizCromossomosComCusto = np.zeros((cromosomos, numCidades + 1), dtype=float)
+            # Seleciona os 10 melhores pais
+            top10 = matrizOrdenada[:10]
 
-for i in range(cromosomos):
-    caminho = matrizCromosomos[i] - 1  # De 0 a 19 para indexar em dCidades
-    caminho_completo = np.append(caminho, caminho[0])  # volta à cidade inicial
-    custo_total = 0.0
-    for j in range(numCidades):
-        origem = caminho_completo[j]
-        destino = caminho_completo[j + 1]
-        custo_total += dCidades[origem, destino]
+            # Pesos para seleção probabilística (melhores têm maior chance)
+            pesos = np.arange(10, 0, -1)
 
-    # Preenche a linha com o cromossomo original e o custo ao final
-    matrizCromossomosComCusto[i, :-1] = matrizCromosomos[i]
-    matrizCromossomosComCusto[i, -1] = custo_total
+            indices_pais = np.random.choice(len(top10), size=10, p=pesos / np.sum(pesos))
+            pais_selecionados = top10[indices_pais]
 
-print("Cromossomos com custo ao final de cada linha:")
-print(matrizCromossomosComCusto)
+            pais_genes = pais_selecionados[:, :-1].astype(int)
 
-matrizOrdenada = matrizCromossomosComCusto[matrizCromossomosComCusto[:, -1].argsort()]
-print("Matriz ordenada por custo:")
-print(matrizOrdenada)
+            # Forma 5 casais (pai1, pai2)
+            casais = pais_genes.reshape(5, 2, -1)
 
-# Seleciona os 10 melhores cromossomos
-top10 = matrizOrdenada[:10]
+            # Gera filhos com crossover
+            filhos = []
+            for casal in casais:
+                f1, f2 = gerar_filhos_com_crossover(casal)
+                filhos.append(f1)
+                filhos.append(f2)
+            filhos = np.array(filhos)
 
-# Pesos invertidos (melhor tem mais chance)
-pesos = np.arange(10, 0, -1)
+            # Aplica mutação nos filhos
+            filhos_mutados = mutacao(filhos)
 
-# Seleciona 10 pais (5 pares)
-indices_pais = np.random.choice(len(top10), size=10, p=pesos / np.sum(pesos))
-pais_selecionados = top10[indices_pais]
-print("Pais selecionados:")
-print(pais_selecionados)
+            # Junta pais e filhos mutados para formar nova população
+            populacao = np.vstack((pais_genes, filhos_mutados))
 
-# vai pegar 5 pais 1 e 5 pais 2
-# procura aonde esta repetindo e troca também até não ter mais repetição
-# procura a repetição só no primeiro pai também
-# trocar apenas 2 posições horizontalmente depois
+        # Após as gerações, calcula novamente o custo para registrar o melhor resultado
+        matrizComCusto_final = np.zeros((cromossomos, num_cidades + 1), dtype=float)
+        for i in range(cromossomos):
+            caminho = populacao[i] - 1
+            caminho_completo = np.append(caminho, caminho[0])
+            custo_total = 0.0
+            for j in range(num_cidades):
+                origem = caminho_completo[j]
+                destino = caminho_completo[j + 1]
+                custo_total += dCidades[origem, destino]
+            matrizComCusto_final[i, :-1] = populacao[i]
+            matrizComCusto_final[i, -1] = custo_total
 
+        matrizOrdenada_final = matrizComCusto_final[matrizComCusto_final[:, -1].argsort()]
+        melhor_cromossomo = matrizOrdenada_final[0]
 
-# Cria uma matriz de 5 casais (pai1, pai2)
-casais = pais_selecionados.reshape(5, 2, -1)
+        print(f"Melhor custo final da execução {execucao + 1}: {melhor_cromossomo[-1]}")
 
-print("Casais (pai1, pai2):")
-print(casais)
+        resultados_finais.append(melhor_cromossomo)
 
-# Remove a última coluna (custo) de todos os pais antes de formar os casais
-pais_somente_genes = pais_selecionados[:, :-1].astype(int)
+    return resultados_finais
 
-# Formar os casais com os genes puros (sem o custo)
-casais = pais_somente_genes.reshape(5, 2, -1)
+if __name__ == "__main__":
+    data = np.loadtxt('cidades.mat')
+    execucoes = 5  # quantas vezes rodar 10k gerações
+    resultados = rodar_genetico_multiplas_execucoes(data, execucoes=execucoes)
 
-print("Casais (pai1, pai2) sem custo:")
-print(casais)
-# COMEÇOCROSSOVER
-
-todos_filhos = []
-
-for i, casal in enumerate(casais):
-    print(f"\n=== Casal {i+1} ===")
-    filho1, filho2 = gerar_filhos_com_crossover(casal)
-    todos_filhos.append(filho1)
-    todos_filhos.append(filho2)
-
-todos_filhos = np.array(todos_filhos)
-print("\nTodos os filhos gerados antes da mutação:")
-print(todos_filhos)
-
-# Aplica a mutação em todos os filhos
-filhos_mutados = mutacao(todos_filhos)
-
-# Mostrar cada filho original e seu mutado lado a lado
-print("\nFilhos antes e depois da mutação:")
-for i in range(len(todos_filhos)):
-    print(f"\nFilho {i+1} original:")
-    print(todos_filhos[i])
-    print(f"Filho {i+1} mutado:")
-    print(filhos_mutados[i])
-
+    for i, resultado in enumerate(resultados):
+        print(f"\nResultado final da execução {i+1}:")
+        print("Caminho:", resultado[:-1].astype(int))
+        print("Custo:", resultado[-1])

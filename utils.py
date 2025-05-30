@@ -38,17 +38,17 @@ def gerar_filhos_com_crossover(casal):
     filho1[local_aleatorio] = pai2[local_aleatorio]
     filho2[local_aleatorio] = pai1[local_aleatorio]
 
-    print(f"\nÍndice aleatório escolhido: {local_aleatorio}")
-    print("Antes da correção:")
-    print("Filho 1:", filho1)
-    print("Filho 2:", filho2)
+#   print(f"\nÍndice aleatório escolhido: {local_aleatorio}")
+#    print("Antes da correção:")
+#    print("Filho 1:", filho1)
+#    print("Filho 2:", filho2)
 
     corrigir_duplicatas(filho1, pai2, local_aleatorio)
     corrigir_duplicatas(filho2, pai1, local_aleatorio)
 
-    print("Após correção de duplicatas:")
-    print("Filho 1 corrigido:", filho1)
-    print("Filho 2 corrigido:", filho2)
+#    print("Após correção de duplicatas:")
+#    print("Filho 1 corrigido:", filho1)
+#    print("Filho 2 corrigido:", filho2)
 
     return filho1, filho2
 
