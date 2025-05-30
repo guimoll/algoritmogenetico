@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from utils import corrigir_duplicatas
+from utils import corrigir_duplicatas, gerar_filhos_com_crossover, mutacao
 
 data = np.loadtxt('cidades.mat')
 # para calcular a aptidao, adicione os valores da primeira coluna na ultima posição, pois o caixeiro precisa começar e terminar na mesma cidade
@@ -85,35 +85,26 @@ print("Casais (pai1, pai2) sem custo:")
 print(casais)
 # COMEÇOCROSSOVER
 
-local_aleatorio = np.random.randint(0, 20)
+todos_filhos = []
 
-# MELHOR CUSTO ENTRE 3 E 5
+for i, casal in enumerate(casais):
+    print(f"\n=== Casal {i+1} ===")
+    filho1, filho2 = gerar_filhos_com_crossover(casal)
+    todos_filhos.append(filho1)
+    todos_filhos.append(filho2)
 
-# iniciando função de pegar os filhos
+todos_filhos = np.array(todos_filhos)
+print("\nTodos os filhos gerados antes da mutação:")
+print(todos_filhos)
 
-# Pegando o primeiro casal como exemplo
-pai1 = casais[0][0]
-pai2 = casais[0][1]
+# Aplica a mutação em todos os filhos
+filhos_mutados = mutacao(todos_filhos)
 
-# Inicialmente, os filhos são cópias dos pais
-filho1 = pai1.copy()
-filho2 = pai2.copy()
+# Mostrar cada filho original e seu mutado lado a lado
+print("\nFilhos antes e depois da mutação:")
+for i in range(len(todos_filhos)):
+    print(f"\nFilho {i+1} original:")
+    print(todos_filhos[i])
+    print(f"Filho {i+1} mutado:")
+    print(filhos_mutados[i])
 
-# Trocar os genes no índice aleatório
-filho1 = pai1.copy()
-filho2 = pai2.copy()
-
-filho1[local_aleatorio] = pai2[local_aleatorio]
-filho2[local_aleatorio] = pai1[local_aleatorio]
-
-print(f"\nÍndice aleatório escolhido: {local_aleatorio}")
-print("Antes da correção:")
-print("Filho 1:", filho1)
-print("Filho 2:", filho2)
-
-corrigir_duplicatas(filho1, pai2, local_aleatorio)
-corrigir_duplicatas(filho2, pai1, local_aleatorio)
-
-print("\nApós correção de duplicatas:")
-print("Filho 1 corrigido:", filho1)
-print("Filho 2 corrigido:", filho2)
