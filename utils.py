@@ -32,17 +32,15 @@ def gerar_filhos_com_crossover(casal):
 
     local_aleatorio = np.random.randint(0, len(pai1))
 
+    #Copia inicial sem alteração
     filho1 = pai1.copy()
     filho2 = pai2.copy()
 
+    # Troca o gene no índice aleatório entre os pais
     filho1[local_aleatorio] = pai2[local_aleatorio]
     filho2[local_aleatorio] = pai1[local_aleatorio]
 
-#   print(f"\nÍndice aleatório escolhido: {local_aleatorio}")
-#    print("Antes da correção:")
-#    print("Filho 1:", filho1)
-#    print("Filho 2:", filho2)
-
+    # Corrige duplicatas nos filhos
     corrigir_duplicatas(filho1, pai2, local_aleatorio)
     corrigir_duplicatas(filho2, pai1, local_aleatorio)
 
